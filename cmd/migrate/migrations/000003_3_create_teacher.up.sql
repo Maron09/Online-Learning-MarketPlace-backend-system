@@ -1,0 +1,13 @@
+-- CREATE TABLE teachers (
+--     id SERIAL PRIMARY KEY,
+--     user_id INT NOT NULL,
+--     user_profile_id INT NOT NULL,
+--     bio TEXT,
+--     profession VARCHAR(100),
+--     certificate VARCHAR(255),
+--     is_approved BOOLEAN DEFAULT false,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+--     FOREIGN KEY (user_profile_id) REFERENCES user_profiles(id) ON DELETE CASCADE
+-- );
