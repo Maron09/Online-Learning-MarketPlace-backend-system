@@ -25,15 +25,19 @@ type UserStore interface {
 
 	// New transaction-based methods
     CreateUserWithTransaction(tx *sql.Tx, user *User) error
-    CreateUserProfileWithTransaction(tx *sql.Tx, profile UserProfile) error
+    CreateUserProfileWithTransaction(tx *sql.Tx, profile *UserProfile) error
+    CreateTeacherUserProfileWithTransaction(tx *sql.Tx, profile *UserProfile) error
+
+	CreateTeacherWithTransaction(tx *sql.Tx, user *Teacher) error
+	GetTeacherByID(id int) (*Teacher, error)
+	ApproveTeacher(teacherID int) error
 }
 
 
 
 type TeacherStore interface {
-	CreateTeacher(teacher Teacher) error
-	GetTeacherByID(id int) (*Teacher, error)
-	ApproveTeacher(teacherID int) error
+	// CreateTeacher(teacher *Teacher) error
+	
 }
 
 
@@ -43,6 +47,7 @@ type UserRole int
 const (
 	TEACHER UserRole = 1
 	STUDENT UserRole = 2
+	ADMIN   UserRole = 3
 )
 
 type User struct {
@@ -130,4 +135,17 @@ type ResetPasswordPayload struct {
     Token          string `json:"token" validate:"required"`
     NewPassword    string `json:"new_password" validate:"required,min=3,max=130"`
     ConfirmPassword string `json:"confirm_password" validate:"required,eqfield=NewPassword"`
+}
+
+
+type RegisterAdminPayload struct {
+	FirstName string `json:"first_name" validate:"required"`
+    LastName  string `json:"last_name" validate:"required"`
+    Email     string `json:"email" validate:"required,email"`
+    Password  string `json:"password" validate:"required,min=3,max=130"`
+	ConfirmPassword string `json:"confirm_password" validate:"required,eqfield=Password"`
+}
+
+type ApproveTeacherPayload struct {
+	TeacherID int `json:"teacher_id" validate:"required"`
 }

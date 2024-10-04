@@ -6,8 +6,8 @@
 --     profession VARCHAR(100),
 --     certificate VARCHAR(255),
 --     is_approved BOOLEAN DEFAULT false,
---     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
---     modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     created_at TIMESTAMPTZ DEFAULT NOW(),
+--     modified_at TIMESTAMPTZ DEFAULT NOW(),
 --     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
 --     FOREIGN KEY (user_profile_id) REFERENCES user_profiles(id) ON DELETE CASCADE
 -- );

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	// "github.com/sikozonpc/ecom/service/teacher"
 	"github.com/sikozonpc/ecom/service/user"
 	"github.com/sikozonpc/ecom/types"
 )
@@ -35,6 +36,12 @@ func (s *APIServer) Start() error {
 	userStore := user.NewStore(s.db) 
 	userHandler := user.NewHandler(userStore, s.db)
 	userHandler.AuthRoutes(subrouter)
+
+
+	// Registering teacher routes
+	// teacherStore := teacher.NewStore(s.db)
+	// teacherHandler := teacher.NewHandler(teacherStore)
+	// teacherHandler.TeachRoutes(subrouter)
 
 
 	log.Println("Starting On ", s.addr)

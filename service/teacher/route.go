@@ -1,32 +1,32 @@
 package teacher
 
-import (
-	"net/http"
+// import (
+// 	"fmt"
+// 	"net/http"
 
-	"github.com/gorilla/mux"
-	"github.com/sikozonpc/ecom/types"
-)
+// 	"github.com/go-playground/validator/v10"
+// 	"github.com/gorilla/mux"
+// 	"github.com/sikozonpc/ecom/types"
+// 	"github.com/sikozonpc/ecom/utils"
+// )
 
-type Handler struct {
-	teacher types.TeacherStore
-}
-
-
-
-func NewHandler(teacher types.TeacherStore) *Handler {
-	return &Handler{
-		teacher: teacher,
-	}
-}
+// type Handler struct {
+// 	teacher types.TeacherStore
+// }
 
 
 
-func (h *Handler) TeachRoutes(router *mux.Router){
-	router.HandleFunc("/register_teacher", h.registerTeacherHandler).Methods(http.MethodPost)
-}
+// func NewHandler(teacher types.TeacherStore) *Handler {
+// 	return &Handler{
+// 		teacher: teacher,
+// 	}
+// }
 
 
 
-func (h *Handler) registerTeacherHandler(writer http.ResponseWriter, request *http.Request){
+// func (h *Handler) TeachRoutes(router *mux.Router){
+	
+// }
 
-}
+
+

@@ -150,10 +150,19 @@ func (s *Store) CreateUserWithTransaction(tx *sql.Tx, user *types.User) error {
 }
 
 // CreateUserProfileWithTransaction creates a user profile within a transaction
-func (s *Store) CreateUserProfileWithTransaction(tx *sql.Tx, profile types.UserProfile) error {
+func (s *Store) CreateUserProfileWithTransaction(tx *sql.Tx, profile *types.UserProfile) error {
     query := `INSERT INTO user_profiles (user_id, profile_picture, country, created_at, modified_at) 
             VALUES ($1, $2, $3, $4, $5)`
     _, err := tx.Exec(query, profile.UserID, profile.ProfilePicture, profile.Country, profile.CreatedAt, profile.ModifiedAt)
+    if err != nil {
+        return fmt.Errorf("failed to create user profile: %v", err)
+    }
+    return nil
+}
+
+func (s *Store) CreateTeacherUserProfileWithTransaction(tx *sql.Tx, userProfile *types.UserProfile) error {
+    query := `INSERT INTO user_profiles (user_id, profile_picture, country) VALUES ($1, $2, $3) RETURNING id`
+    err := tx.QueryRow(query, userProfile.UserID, userProfile.ProfilePicture,userProfile.Country).Scan(&userProfile.ID)
     if err != nil {
         return fmt.Errorf("failed to create user profile: %v", err)
     }
@@ -217,4 +226,67 @@ func (s *Store) DeletePasswordResetToken(token string) error{
 	query := `DELETE FROM password_resets WHERE token = $1`
     _, err := s.db.Exec(query, token)
     return err
+}
+
+
+// Teacher
+
+func (s *Store) CreateTeacherWithTransaction(tx *sql.Tx, teacher *types.Teacher) error {
+	query := `INSERT INTO teachers (user_id, user_profile_id, bio, profession, certificate, is_approved) 
+			VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+	
+	// Capture the inserted teacher ID
+	err := tx.QueryRow(query, teacher.UserID, teacher.UserProfileID, teacher.Bio, teacher.Profession, teacher.Certificate, teacher.IsApproved).Scan(&teacher.ID)
+	if err != nil {
+		return fmt.Errorf("failed to create teacher: %v", err)
+	}
+	
+	return nil
+}
+
+
+func (s *Store) GetTeacherByID(id int) (*types.Teacher, error) {
+	var teacher types.Teacher
+
+    query := `SELECT id, user_id, user_profile_id, bio, profession, certificate, is_approved FROM teachers WHERE id=$1`
+
+    row := s.db.QueryRow(query, id)
+    err := row.Scan(&teacher.ID, 
+		&teacher.UserID, 
+		&teacher.UserProfileID, 
+		&teacher.Bio, 
+		&teacher.Profession, 
+		&teacher.Certificate, 
+		&teacher.IsApproved,
+	)
+
+    if err == sql.ErrNoRows {
+        return nil, fmt.Errorf("teacher with id %d not found", id)
+    } else if err!= nil {
+        return nil, err
+    }
+
+    return &teacher, nil
+}
+
+
+func (s *Store) ApproveTeacher(teacherID int) error {
+    query := "UPDATE teachers SET is_approved=true WHERE id=$1"
+    result, err := s.db.Exec(query, teacherID)
+    
+    if err != nil {
+        return fmt.Errorf("error approving teacher with ID %d: %v", teacherID, err)
+    }
+
+	rowsAffected, err := result.RowsAffected()
+    if err != nil {
+        return fmt.Errorf("error getting affected rows for teacher with ID %d: %v", teacherID, err)
+    }
+
+	if rowsAffected == 0 {
+        return fmt.Errorf("no teacher found with ID %d", teacherID)
+    }
+
+    return nil
+
 }
