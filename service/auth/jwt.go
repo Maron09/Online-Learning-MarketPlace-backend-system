@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -57,14 +58,14 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store types.UserStore, allowedRol
         token, err := ValidateToken(tokenString)
         if err != nil {
             log.Printf("Failed to validate token: %v", err)
-            PermissionDenied(w)
+            PermissionDenied(w, "")
             return
         }
         log.Println("Token validated successfully")
 
         if !token.Valid {
             log.Println("Invalid token")
-            PermissionDenied(w)
+            PermissionDenied(w, "")
             return
         }
 
@@ -72,7 +73,7 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store types.UserStore, allowedRol
         claims, ok := token.Claims.(jwt.MapClaims)
         if !ok {
             log.Println("Failed to extract claims from token")
-            PermissionDenied(w)
+            PermissionDenied(w, "")
             return
         }
 
@@ -83,14 +84,14 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store types.UserStore, allowedRol
             userID, err = strconv.Atoi(id)
             if err != nil {
                 log.Printf("Failed to convert user_id to integer: %v", err)
-                PermissionDenied(w)
+                PermissionDenied(w, "")
                 return
             }
         case float64: // Handling if user_id is stored as a number in the token
             userID = int(id)
         default:
             log.Println("user_id claim missing or invalid type in the token")
-            PermissionDenied(w)
+            PermissionDenied(w, "")
             return
         }
 
@@ -98,7 +99,7 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store types.UserStore, allowedRol
         userRoleClaim, ok := claims["role"].(float64)
         if !ok {
             log.Println("role claim missing or invalid type in the token")
-            PermissionDenied(w)
+            PermissionDenied(w, "")
             return
         }
 
@@ -109,7 +110,7 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store types.UserStore, allowedRol
         u, err := store.GetUserByID(userID)
         if err != nil {
             log.Printf("Failed to get user by ID: %v", err)
-            PermissionDenied(w)
+            PermissionDenied(w, "")
             return
         }
 
@@ -124,7 +125,7 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store types.UserStore, allowedRol
 
         if !roleAllowed {
             log.Printf("User with ID %d has role %d which is not permitted", userID, u.Role)
-            PermissionDenied(w)
+            PermissionDenied(w, "unauthorized access")
             return
         }
 
@@ -140,6 +141,34 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store types.UserStore, allowedRol
 
 
 
+func GetTeacherIDFromToken(r *http.Request) (int, error) {
+	tokenString := GetJwtTokenFromRequest(r)
+	if tokenString == "" {
+		return 0, errors.New("invalid token")
+	}
+
+	token, err := ValidateToken(tokenString)
+	if err!= nil {
+        return 0, err
+    }
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return 0, errors.New("invalid token claims")
+	}
+
+	teacherIDClaim, ok := claims["user_id"].(string)
+	if !ok {
+		return 0, errors.New("invalid user_id claim")
+	}
+
+	teacherID, err := strconv.Atoi(teacherIDClaim)
+	if err!= nil {
+        return 0, fmt.Errorf("invalid user_id claim: %v", err)
+    }
+
+	return teacherID, nil
+}
 
 
 
@@ -172,9 +201,13 @@ func ValidateToken(t string) (*jwt.Token, error) {
 }
 
 
-func PermissionDenied(writer http.ResponseWriter){
-	utils.WriteError(writer, http.StatusForbidden, fmt.Errorf("permission denied"))
+func PermissionDenied(writer http.ResponseWriter, message string) {
+	if message == "" {
+		message = "permission denied"
+	}
+	utils.WriteError(writer, http.StatusForbidden, fmt.Errorf(message))
 }
+
 
 
 func GetUserIDFromContext(ctx context.Context) int {

@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"net/smtp"
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
@@ -118,3 +120,15 @@ func GenerateTOken() string {
     }
     return base64.URLEncoding.EncodeToString(b)
 }
+
+
+func Slugify(name string, id int) string {
+	slug := strings.ToLower(name)
+	slug = strings.ReplaceAll(slug, " ", "-")
+	reg := regexp.MustCompile("[^a-z0-9-]+")
+	slug = reg.ReplaceAllString(slug, "")
+
+	slug = fmt.Sprintf("%s-%d", slug, id)
+
+	return slug
+} 

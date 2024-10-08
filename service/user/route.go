@@ -615,7 +615,7 @@ func (h *Handler) adminApproveHandler(w http.ResponseWriter, r *http.Request) {
     }
 
 	if user.Role!= types.ADMIN {
-        auth.PermissionDenied(w)
+        auth.PermissionDenied(w, "unauthorized access")
 		return
     }
 

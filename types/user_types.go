@@ -35,10 +35,7 @@ type UserStore interface {
 
 
 
-type TeacherStore interface {
-	// CreateTeacher(teacher *Teacher) error
-	
-}
+
 
 
 
