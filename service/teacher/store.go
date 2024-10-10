@@ -46,6 +46,42 @@ func (s *Store) GetTeacherByUserID(userID int) (*types.Teacher, error) {
 }
 
 
+func (s *Store) GetCoursesByTeacherID(teacherID int) ([]types.Course, error) {
+	var courses []types.Course
+
+	query := `SELECT id, teacher_id, category_id, name, slug, description, price 
+			FROM courses 
+			WHERE teacher_id = $1`
+	
+	rows, err := s.db.Query(query, teacherID)
+	if err!= nil {
+        return nil, err
+    }
+	defer rows.Close()
+
+	for rows.Next() {
+		var course types.Course
+		err := rows.Scan(
+			&course.ID,
+			&course.TeacherID,
+			&course.CategoryID,
+			&course.Name,
+			&course.Slug,
+			&course.Description,
+			&course.Price,
+		)
+		if err != nil {
+			return nil, err
+		}
+		courses = append(courses, course)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return courses, nil
+}
+
 
 func (s *Store) CreateCategory(category *types.Category) error {
 	var existingCategoryID int
@@ -329,7 +365,7 @@ func (s *Store) CreateSection(section *types.Section) error {
 
 func (s *Store) GetSectionByID(id int) (*types.Section, error) {
 	var section types.Section
-	query := `SELECT id, course_id, title, order, created_at FROM sections WHERE id = $1`
+	query := `SELECT id, course_id, title, "order", created_at FROM sections WHERE id = $1`
 
 	err := s.db.QueryRow(query, id).Scan(
 		&section.ID,
@@ -340,7 +376,7 @@ func (s *Store) GetSectionByID(id int) (*types.Section, error) {
 	)
 	if err!= nil {
 		if err == sql.ErrNoRows {
-            return nil, nil
+            return nil, fmt.Errorf("section not found for ID: %d", id)
         }
         return nil, err
 	}
@@ -349,7 +385,7 @@ func (s *Store) GetSectionByID(id int) (*types.Section, error) {
 
 
 func (s *Store) UpdateSection(section *types.Section) error {
-	query := `UPDATE sections SET course_id = $1, title = $2, order = $3, modified_at = NOW() WHERE id = $4`
+	query := `UPDATE sections SET course_id = $1, title = $2, "order" = $3, modified_at = NOW() WHERE id = $4`
     _, err := s.db.Exec(query, section.CourseID, section.Title, section.Order, section.ID)
     if err!= nil {
         return err
@@ -360,6 +396,67 @@ func (s *Store) UpdateSection(section *types.Section) error {
 
 func (s *Store) DeleteSection(id int) error {
 	query := `DELETE FROM sections WHERE id = $1;`
+    _, err := s.db.Exec(query, id)
+    if err!= nil {
+        return err
+    }
+    return nil
+}
+
+
+
+// VIDEO MANAGEMENT
+
+func (s *Store) CreateVideo(video *types.Video) error {
+    query := `INSERT INTO videos (section_id, title, video_file, "order", created_at, modified_at)
+            VALUES ($1, $2, $3, $4, NOW(), NOW()) RETURNING id`
+    err := s.db.QueryRow(
+        query,
+        video.SectionID,
+        video.Title,
+        video.VideoFile,
+        video.Order,
+    ).Scan(&video.ID)
+    if err != nil {
+        return err
+    }
+    return nil
+}
+
+
+func (s *Store) GetVideoByID(id int) (*types.Video, error) {
+	var video types.Video
+    query := `SELECT id, section_id, title, video_file, "order", created_at FROM videos WHERE id = $1`
+
+    err := s.db.QueryRow(query, id).Scan(
+        &video.ID,
+        &video.SectionID,
+        &video.Title,
+        &video.VideoFile,
+        &video.Order,
+        &video.CreatedAt,
+    )
+    if err!= nil {
+        if err == sql.ErrNoRows {
+            return nil, fmt.Errorf("video not found for ID: %d", id)
+        }
+        return nil, err
+    }
+    return &video, nil
+}
+
+
+func (s *Store) UpdateVideo(video *types.Video) error {
+	query := `UPDATE videos SET section_id = $1, title = $2, video_file = $3, "order" = $4, modified_at = NOW() WHERE id = $5`
+    _, err := s.db.Exec(query, video.SectionID, video.Title, video.VideoFile, video.Order, video.ID)
+    if err!= nil {
+        return err
+    }
+    return nil
+}
+
+func (s *Store) DeleteVideo(id int) error {
+	query := `DELETE FROM videos WHERE id = $1;`
     _, err := s.db.Exec(query, id)
     if err!= nil {
         return err

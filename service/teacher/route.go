@@ -2,7 +2,7 @@ package teacher
 
 import (
 	"fmt"
-	
+
 	"net/http"
 	"strconv"
 
@@ -10,6 +10,7 @@ import (
 	"github.com/sikozonpc/ecom/service/auth"
 	"github.com/sikozonpc/ecom/types"
 	"github.com/sikozonpc/ecom/utils"
+
 )
 
 type Handler struct {
@@ -50,6 +51,14 @@ func (h *Handler) TeachRoutes(router *mux.Router){
 
 	// sections
 	router.HandleFunc("/course_builder/sections/create", auth.WithJWTAuth(h.createSectionHandle, h.store, usersOnly)).Methods(http.MethodPost)
+	router.HandleFunc("/course_builder/section/edit/{id}", auth.WithJWTAuth(h.editSectionHandle, h.store, usersOnly)).Methods(http.MethodPatch)
+	router.HandleFunc("/course_builder/section/delete/{id}", auth.WithJWTAuth(h.deleteSectionHandle, h.store, usersOnly)).Methods(http.MethodDelete)
+
+	// videos
+	router.HandleFunc("/course_builder/videos/create", auth.WithJWTAuth(h.createVideoHandle, h.store, usersOnly)).Methods(http.MethodPost)
+    router.HandleFunc("/course_builder/video/edit/{id}", auth.WithJWTAuth(h.editVideoHandle, h.store, usersOnly)).Methods(http.MethodPatch)
+    router.HandleFunc("/course_builder/video/delete/{id}", auth.WithJWTAuth(h.deleteVideoHandle, h.store, usersOnly)).Methods(http.MethodDelete)
+    // router.HandleFunc("/course_builder/videos", auth.WithJWTAuth(h.getVideosHandle, h.store, usersOnly)).Methods(http.MethodGet)
 }
 
 
@@ -106,7 +115,12 @@ func (h *Handler) createCategoryHandle(writer http.ResponseWriter, request *http
         return
     }
 
-	utils.WriteJSON(writer, http.StatusCreated, category)
+	response := map[string]interface{}{
+		"message": "Category Created successfully",
+		"video":   category,
+	}
+	
+	utils.WriteJSON(writer, http.StatusOK, response)
 }
 
 
@@ -187,7 +201,12 @@ func (h *Handler) editCategoryHandle(writer http.ResponseWriter, request *http.R
         return
     }
 
-	utils.WriteJSON(writer, http.StatusOK, category)
+	response := map[string]interface{}{
+		"message": "Category updated successfully",
+		"video":   category,
+	}
+	
+	utils.WriteJSON(writer, http.StatusOK, response)
 }
 
 
@@ -295,7 +314,12 @@ func (h *Handler) createCourseHandle(writer http.ResponseWriter, request *http.R
 	}
 
 	// Return success response
-	utils.WriteJSON(writer, http.StatusCreated, course)
+	response := map[string]interface{}{
+		"message": "Course Created successfully",
+		"video":   course,
+	}
+	
+	utils.WriteJSON(writer, http.StatusOK, response)
 }
 
 
@@ -363,7 +387,12 @@ func (h *Handler) editCourseHandle(writer http.ResponseWriter, request *http.Req
 		return
 	}
 
-	utils.WriteJSON(writer, http.StatusOK, course)
+	response := map[string]interface{}{
+		"message": "Course updated successfully",
+		"video":   course,
+	}
+	
+	utils.WriteJSON(writer, http.StatusOK, response)
 }
 
 
@@ -518,5 +547,353 @@ func (h *Handler) createSectionHandle(writer http.ResponseWriter, request *http.
         return
     }
 
-	utils.WriteJSON(writer, http.StatusCreated, section)
+	response := map[string]interface{}{
+		"message": "Section Created successfully",
+		"video":   section,
+	}
+	
+	utils.WriteJSON(writer, http.StatusOK, response)
+}
+
+
+func (h *Handler) editSectionHandle(writer http.ResponseWriter, request *http.Request) {
+	// Get user ID from the token
+	userID, err := auth.GetTeacherIDFromToken(request)
+	if err != nil {
+		utils.WriteError(writer, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+		return
+	}
+
+	// Fetch the teacher associated with the userID
+	teacher, err := h.teacher.GetTeacherByUserID(userID)
+	if err != nil {
+		utils.WriteError(writer, http.StatusUnauthorized, fmt.Errorf("teacher not found for this user"))
+		return
+	}
+
+	vars := mux.Vars(request)
+	sectionID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		utils.WriteError(writer, http.StatusBadRequest, fmt.Errorf("invalid section ID: %s", vars["id"]))
+		return
+	}
+
+	section, err := h.teacher.GetSectionByID(sectionID)
+	if err != nil {
+		utils.WriteError(writer, http.StatusNotFound, fmt.Errorf("failed to fetch section: %v", err))
+		return
+	}
+
+	// Handle case where section is not found
+	if section == nil {
+		utils.WriteError(writer, http.StatusNotFound, fmt.Errorf("section not found for ID: %d", sectionID))
+		return
+	}
+
+	courses, err := h.teacher.GetCoursesByTeacherID(teacher.ID)
+	if err!= nil {
+        utils.WriteError(writer, http.StatusInternalServerError, fmt.Errorf("failed to fetch courses"))
+        return
+    }
+
+	var courseBelongsToTeacher bool
+
+	for _, course := range courses {
+		if course.ID == section.CourseID {
+			courseBelongsToTeacher = true
+			break
+		}
+	}
+
+	if !courseBelongsToTeacher {
+		auth.PermissionDenied(writer, "you do not have permission to edit this section")
+        return
+	}
+
+	var payload types.UpdateSectionPayload
+	if err := utils.ParseJSON(request, &payload); err!= nil {
+        utils.WriteError(writer, http.StatusBadRequest, err)
+        return
+    }
+	// Validate payload
+	if err := utils.Validate.Struct(payload); err!= nil {
+        utils.WriteError(writer, http.StatusBadRequest, err)
+        return
+    }
+
+    section.Title = payload.Title
+    section.Order = payload.Order
+
+    err = h.teacher.UpdateSection(section)
+    if err!= nil {
+        utils.WriteError(writer, http.StatusInternalServerError, err)
+        return
+    }
+
+    response := map[string]interface{}{
+		"message": "Section updated successfully",
+		"video":   section,
+	}
+	
+	utils.WriteJSON(writer, http.StatusOK, response)
+}
+
+
+
+func (h *Handler) deleteSectionHandle(writer http.ResponseWriter, request *http.Request) {
+	userID, err := auth.GetTeacherIDFromToken(request)
+	if err != nil {
+		utils.WriteError(writer, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+		return
+	}
+
+	// Fetch the teacher associated with the userID
+	teacher, err := h.teacher.GetTeacherByUserID(userID)
+	if err != nil {
+		utils.WriteError(writer, http.StatusUnauthorized, fmt.Errorf("teacher not found for this user"))
+		return
+	}
+
+	vars := mux.Vars(request)
+	sectionID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		utils.WriteError(writer, http.StatusBadRequest, fmt.Errorf("invalid section ID: %s", vars["id"]))
+		return
+	}
+
+	section, err := h.teacher.GetSectionByID(sectionID)
+	if err != nil {
+		utils.WriteError(writer, http.StatusNotFound, fmt.Errorf("failed to fetch section: %v", err))
+		return
+	}
+
+	// Handle case where section is not found
+	if section == nil {
+		utils.WriteError(writer, http.StatusNotFound, fmt.Errorf("section not found for ID: %d", sectionID))
+		return
+	}
+
+	courses, err := h.teacher.GetCoursesByTeacherID(teacher.ID)
+	if err!= nil {
+        utils.WriteError(writer, http.StatusInternalServerError, fmt.Errorf("failed to fetch courses"))
+        return
+    }
+	var courseBelongsToTeacher bool
+
+	for _, course := range courses {
+		if course.ID == section.CourseID {
+			courseBelongsToTeacher = true
+			break
+		}
+	}
+
+	if !courseBelongsToTeacher {
+		auth.PermissionDenied(writer, "you do not have permission to delete this section")
+        return
+	}
+
+	err = h.teacher.DeleteSection(sectionID)
+	if err!= nil {
+        utils.WriteError(writer, http.StatusInternalServerError, fmt.Errorf("failed to delete section: %v", err))
+        return
+    }
+
+	response := map[string]string{"message": "section deleted successfully"}
+
+	utils.WriteJSON(writer, http.StatusOK, response)
+}
+
+
+// VIDEO MANAGEMENT
+func (h *Handler) createVideoHandle(writer http.ResponseWriter, request *http.Request) {
+	var payload types.CreateVideoPayload
+
+	if err := utils.ParseJSON(request, &payload); err!= nil {
+        utils.WriteError(writer, http.StatusBadRequest, err)
+        return
+    }
+
+	// Validate the payload
+	if err := utils.Validate.Struct(payload); err != nil {
+		utils.WriteError(writer, http.StatusBadRequest, err)
+        return
+    }
+	
+	video := &types.Video{
+		SectionID: payload.SectionID,
+		Title: payload.Title,
+		VideoFile: payload.VideoFile,
+		Order: payload.Order,
+	}
+
+	err := h.teacher.CreateVideo(video)
+	if err!= nil {
+        utils.WriteError(writer, http.StatusInternalServerError, err)
+        return
+    }
+	response := map[string]interface{}{
+		"message": "Video Created successfully",
+		"video":   video,
+	}
+	
+	utils.WriteJSON(writer, http.StatusOK, response)
+}
+
+
+func (h *Handler) editVideoHandle(writer http.ResponseWriter, request *http.Request) {
+	// Get user ID from the token
+	userID, err := auth.GetTeacherIDFromToken(request)
+	if err != nil {
+		utils.WriteError(writer, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+		return
+	}
+
+	// Fetch the teacher associated with the userID
+	teacher, err := h.teacher.GetTeacherByUserID(userID)
+	if err != nil {
+		utils.WriteError(writer, http.StatusUnauthorized, fmt.Errorf("teacher not found for this user"))
+		return
+	}
+
+	// Get video ID from the URL params
+	vars := mux.Vars(request)
+	videoID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		utils.WriteError(writer, http.StatusBadRequest, fmt.Errorf("invalid video ID: %s", vars["id"]))
+		return
+	}
+
+	// Fetch the video by videoID
+	video, err := h.teacher.GetVideoByID(videoID)
+	if err != nil {
+		utils.WriteError(writer, http.StatusNotFound, fmt.Errorf("failed to fetch video: %v", err))
+		return
+	}
+
+	// Fetch the section associated with the video
+	section, err := h.teacher.GetSectionByID(video.SectionID)
+	if err != nil {
+		utils.WriteError(writer, http.StatusNotFound, fmt.Errorf("failed to fetch section: %v", err))
+		return
+	}
+
+	// Fetch the courses associated with the teacher
+	courses, err := h.teacher.GetCoursesByTeacherID(teacher.ID)
+	if err != nil {
+		utils.WriteError(writer, http.StatusInternalServerError, fmt.Errorf("failed to fetch courses for the teacher"))
+		return
+	}
+
+	var courseBelongsToTeacher bool
+	for _, course := range courses {
+		if course.ID == section.CourseID {
+			courseBelongsToTeacher = true
+			break
+		}
+	}
+
+	if !courseBelongsToTeacher {
+		auth.PermissionDenied(writer, "you do not have permission to edit this video")
+		return
+	}
+
+	var payload types.UpdateVideoPayload
+
+	if err := utils.ParseJSON(request, &payload); err!= nil {
+        utils.WriteError(writer, http.StatusBadRequest, err)
+        return
+    }
+
+	// Validate the payload
+	if err := utils.Validate.Struct(payload); err!= nil {
+        utils.WriteError(writer, http.StatusBadRequest, err)
+        return
+    }
+
+	video.Title = payload.Title
+	video.VideoFile = payload.VideoFile
+	video.Order = payload.Order
+
+	err = h.teacher.UpdateVideo(video)
+	if err!= nil {
+        utils.WriteError(writer, http.StatusInternalServerError, err)
+        return
+    }
+	
+	response := map[string]interface{}{
+		"message": "Video updated successfully",
+		"video":   video,
+	}
+	
+	utils.WriteJSON(writer, http.StatusOK, response)
+}
+
+
+
+func (h *Handler) deleteVideoHandle(writer http.ResponseWriter, request *http.Request) {
+	// Get user ID from the token
+    userID, err := auth.GetTeacherIDFromToken(request)
+    if err!= nil {
+        utils.WriteError(writer, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+        return
+    }
+
+    // Fetch the teacher associated with the userID
+    teacher, err := h.teacher.GetTeacherByUserID(userID)
+    if err!= nil {
+        utils.WriteError(writer, http.StatusUnauthorized, fmt.Errorf("teacher not found for this user"))
+        return
+    }
+
+    // Get video ID from the URL params
+    vars := mux.Vars(request)
+    videoID, err := strconv.Atoi(vars["id"])
+    if err!= nil {
+        utils.WriteError(writer, http.StatusBadRequest, fmt.Errorf("invalid video ID: %s", vars["id"]))
+        return
+    }
+
+	// Fetch the video by videoID
+	video, err := h.teacher.GetVideoByID(videoID)
+	if err != nil {
+		utils.WriteError(writer, http.StatusNotFound, fmt.Errorf("failed to fetch video: %v", err))
+		return
+	}
+
+	// Fetch the section associated with the video
+	section, err := h.teacher.GetSectionByID(video.SectionID)
+	if err != nil {
+		utils.WriteError(writer, http.StatusNotFound, fmt.Errorf("failed to fetch section: %v", err))
+		return
+	}
+
+	// Fetch the courses associated with the teacher
+	courses, err := h.teacher.GetCoursesByTeacherID(teacher.ID)
+	if err != nil {
+		utils.WriteError(writer, http.StatusInternalServerError, fmt.Errorf("failed to fetch courses for the teacher"))
+		return
+	}
+
+	var courseBelongsToTeacher bool
+	for _, course := range courses {
+		if course.ID == section.CourseID {
+			courseBelongsToTeacher = true
+			break
+		}
+	}
+
+	if !courseBelongsToTeacher {
+		auth.PermissionDenied(writer, "you do not have permission to delete this video")
+		return
+	}
+
+	err = h.teacher.DeleteVideo(videoID)
+	if err!= nil {
+        utils.WriteError(writer, http.StatusInternalServerError, fmt.Errorf("failed to delete video: %v", err))
+        return
+    }
+
+	response := map[string]string{"message": "Video deleted successfully"}
+	
+    utils.WriteJSON(writer, http.StatusOK, response)
 }

@@ -8,6 +8,9 @@ import (
 type TeacherStore interface {
 
 	GetTeacherByUserID(userID int) (*Teacher, error)
+	GetCoursesByTeacherID(teacherID int) ([]Course, error)
+
+
 	// category CRUD operations
 	CreateCategory(category *Category) error
 	GetCategory() ([]Category, error)
@@ -32,10 +35,10 @@ type TeacherStore interface {
 	DeleteSection(id int) error
 
 	// Video CRUD operations
-	// CreateVideo(video *Video) error
-	// GetVideoByID(id int) (*Video, error)
-	// UpdateVideo(video *Video) error
-	// DeleteVideo(id int) error
+	CreateVideo(video *Video) error
+	GetVideoByID(id int) (*Video, error)
+	UpdateVideo(video *Video) error
+	DeleteVideo(id int) error
 }
 
 type Category struct {
@@ -137,12 +140,12 @@ type UpdateSectionPayload struct {
 type CreateVideoPayload struct {
 	SectionID int    `json:"section_id" validate:"required"`
 	Title     string `json:"title" validate:"required"`
-	VideoFile string `json:"video_file" validate:"required,url"`
+	VideoFile string `json:"video_file" validate:"required"`
 	Order     int    `json:"order"`
 }
 
 type UpdateVideoPayload struct {
     Title     string `json:"title" validate:"required"`
-    VideoFile string `json:"video_file" validate:"omitempty,url"`
+    VideoFile string `json:"video_file" validate:"required"`
     Order     int    `json:"order"`
 }
