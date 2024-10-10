@@ -33,8 +33,9 @@ func (s *APIServer) Start() error {
 
 
 	// Registering user routes
+	techStore := teacher.NewStore(s.db)
 	userStore := user.NewStore(s.db) 
-	userHandler := user.NewHandler(userStore, s.db)
+	userHandler := user.NewHandler(userStore, s.db, techStore)
 	userHandler.AuthRoutes(subrouter)
 
 

@@ -24,33 +24,6 @@ func NewStore(db *sql.DB) *Store {
 
 
 
-// func (s *Store) CreateUser(user *types.User) error {
-// 	query := `
-// 		INSERT INTO users (first_name, last_name, email, password, role, otp, otp_expires_at)
-// 		VALUES ($1, $2, $3, $4, $5, $6, $7)
-// 		RETURNING id`
-	
-// 	// Use QueryRow to get the ID of the newly created user
-// 	err := s.db.QueryRow(query, user.FirstName, user.LastName, user.Email, user.Password, user.Role).Scan(&user.ID)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to create user: %w", err)
-// 	}
-// 	return nil
-// }
-
-
-
-// func (s *Store) CreateUserProfile(userProfile types.UserProfile) error {
-//     query := "INSERT INTO user_profiles (user_id, profile_picture, country, created_at, modified_at) VALUES ($1, $2, $3, NOW(), NOW()) RETURNING id"
-//     err := s.db.QueryRow(query, userProfile.UserID, userProfile.ProfilePicture, userProfile.Country).Scan(&userProfile.ID)
-//     if err != nil {
-//         return err
-//     }
-//     return nil
-// }
-
-
-
 func (s *Store) GetUserByID(id int) (types.User, error) {
 	var user types.User
 
@@ -130,6 +103,43 @@ func (s *Store) GetUserByEmailForLogin(email string) (*types.User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+
+
+// UpdateUser updates the user record in the users table.
+// UpdateUserDetails updates the user's basic information.
+func (s *Store) UpdateUserDetails(userID int, payload *types.UpdateProfilePayload) error {
+	query := `UPDATE users 
+                SET first_name = COALESCE($1, first_name), 
+                    last_name = COALESCE($2, last_name), 
+                    email = COALESCE($3, email) 
+                WHERE id = $4`
+	_, err := s.db.Exec(query, payload.FirstName, payload.LastName, payload.Email, userID)
+	return err
+}
+
+// UpdateUserProfile updates the user profile record in the user_profiles table.
+func (s *Store) UpdateUserProfile(userID int, payload *types.UpdateProfilePayload) error {
+	query := `UPDATE user_profiles 
+                SET profile_picture = COALESCE($1, profile_picture), 
+                    country = COALESCE($2, country), 
+                    modified_at = NOW()
+                WHERE user_id = $3`
+	_, err := s.db.Exec(query, payload.ProfilePicture, payload.Country, userID)
+	return err
+}
+
+// UpdateTeacherProfile updates the teacher profile details.
+func (s *Store) UpdateTeacherProfile(userID int, payload *types.UpdateProfilePayload) error {
+	query := `UPDATE teachers 
+                SET bio = COALESCE($1, bio), 
+                    profession = COALESCE($2, profession), 
+                    certificate = COALESCE($3, certificate), 
+                    modified_at = NOW() 
+                WHERE user_id = $4`
+	_, err := s.db.Exec(query, payload.Bio, payload.Profession, payload.Certificate, userID)
+	return err
 }
 
 

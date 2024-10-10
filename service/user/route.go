@@ -18,13 +18,15 @@ import (
 
 type Handler struct {
 	store types.UserStore
+	teacher types.TeacherStore
 	db *sql.DB
 }
 
 
-func NewHandler(store types.UserStore, db *sql.DB) *Handler {
+func NewHandler(store types.UserStore, db *sql.DB, teacher types.TeacherStore) *Handler {
 	return &Handler{
 		store: store,
+		teacher: teacher,
 		db: db,
 	}
 }
@@ -32,7 +34,13 @@ func NewHandler(store types.UserStore, db *sql.DB) *Handler {
 func (h *Handler) AuthRoutes(router *mux.Router){
 
 	adminOnly := []types.UserRole{types.ADMIN}
+	usersAllowed := []types.UserRole{
+		types.ADMIN,
+        types.TEACHER,
+        types.STUDENT,
+	}
 
+	// Authentication routes
 	router.HandleFunc("/register", h.registerHandler).Methods(http.MethodPost)
 	router.HandleFunc("/register_teacher", h.registerTeacherHandler).Methods(http.MethodPost)
 	router.HandleFunc("/verify_otp", h.verifyHandler).Methods(http.MethodPost)
@@ -42,6 +50,11 @@ func (h *Handler) AuthRoutes(router *mux.Router){
 	router.HandleFunc("/reset_password", h.resetPasswordHandler).Methods(http.MethodPost)
 	router.HandleFunc("/admin_create", h.createAdminHandler).Methods(http.MethodPost)
 	router.HandleFunc("/admin_approve", auth.WithJWTAuth(h.adminApproveHandler, h.store, adminOnly)).Methods(http.MethodPost)
+
+	// Profile routes
+	router.HandleFunc("/profile", auth.WithJWTAuth(h.getProfileHandler, h.store, usersAllowed)).Methods(http.MethodGet)
+    router.HandleFunc("/profile/edit", auth.WithJWTAuth(h.updateProfileHandler, h.store, usersAllowed)).Methods(http.MethodPut)
+
 }
 
 
@@ -638,4 +651,147 @@ func (h *Handler) adminApproveHandler(w http.ResponseWriter, r *http.Request) {
 
 	response := map[string]string{"message": "Teacher approved successfully"}
 	utils.WriteJSON(w, http.StatusOK, response)
+}
+
+
+func (h *Handler) getProfileHandler(writer http.ResponseWriter, request *http.Request) {
+	userID, err := auth.GetTeacherIDFromToken(request)
+	if err!= nil {
+        utils.WriteError(writer, http.StatusUnauthorized, fmt.Errorf("unauthorized access"))
+        return
+    }
+
+	user, err := h.store.GetUserByID(userID)
+	if err!= nil {
+        utils.WriteError(writer, http.StatusInternalServerError, fmt.Errorf("failed to get user: %v", err))
+        return
+    }
+
+	profile, err := h.store.GetUserProfile(userID)
+	if err!= nil {
+        utils.WriteError(writer, http.StatusInternalServerError, fmt.Errorf("failed to get user profile: %v", err))
+        return
+    }
+
+	var teacher *types.Teacher
+	if user.Role == types.TEACHER {
+		teacher, err = h.teacher.GetTeacherByUserID(userID)
+	}
+	if err != nil && err != sql.ErrNoRows {
+		utils.WriteError(writer, http.StatusInternalServerError, fmt.Errorf("failed to fetch teacher details"))
+		return
+	}
+
+	response := map[string]interface{}{
+        "user":  user,
+        "profile": profile,
+    }
+	if teacher != nil {
+        response["teacher"] = teacher
+    }
+	utils.WriteJSON(writer, http.StatusOK, response)
+}
+
+
+func (h *Handler) updateProfileHandler(writer http.ResponseWriter, request *http.Request) {
+	userID, err := auth.GetTeacherIDFromToken(request)
+	if err != nil {
+		utils.WriteError(writer, http.StatusUnauthorized, fmt.Errorf("unauthorized access"))
+		return
+	}
+
+	var payload types.UpdateProfilePayload
+	if err := utils.ParseJSON(request, &payload); err != nil {
+		utils.WriteError(writer, http.StatusBadRequest, err)
+		return
+	}
+
+	if err := utils.Validate.Struct(payload); err != nil {
+		errors := err.(validator.ValidationErrors)
+		utils.WriteError(writer, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
+		return
+	}
+
+	// Fetch user from the database
+	user, err := h.store.GetUserByID(userID)
+	if err != nil {
+		utils.WriteError(writer, http.StatusInternalServerError, fmt.Errorf("failed to get user: %v", err))
+		return
+	}
+
+	// Update user fields if they are provided
+	if payload.FirstName != nil {
+		user.FirstName = *payload.FirstName
+	}
+	if payload.LastName != nil {
+		user.LastName = *payload.LastName
+	}
+	if payload.Email != nil {
+		user.Email = *payload.Email
+	}
+
+	// Update user details in the database
+	if err := h.store.UpdateUserDetails(userID, &payload); err != nil {
+		utils.WriteError(writer, http.StatusInternalServerError, fmt.Errorf("failed to update user details: %v", err))
+		return
+	}
+
+	// Fetch user profile
+	profile, err := h.store.GetUserProfile(userID)
+	if err != nil {
+		utils.WriteError(writer, http.StatusInternalServerError, fmt.Errorf("failed to get user profile: %v", err))
+		return
+	}
+
+	// Update profile fields if they are provided
+	if payload.ProfilePicture != nil {
+		profile.ProfilePicture = *payload.ProfilePicture
+	}
+	if payload.Country != nil {
+		profile.Country = *payload.Country
+	}
+
+	// Update user profile in the database
+	if err := h.store.UpdateUserProfile(userID, &payload); err != nil {
+		utils.WriteError(writer, http.StatusInternalServerError, fmt.Errorf("failed to update user profile: %v", err))
+		return
+	}
+
+	// If user is a teacher, update teacher-specific fields
+	if user.Role == types.TEACHER {
+		teacher, err := h.teacher.GetTeacherByUserID(userID)
+		if err != nil {
+			utils.WriteError(writer, http.StatusInternalServerError, fmt.Errorf("failed to fetch teacher details: %v", err))
+			return
+		}
+
+		if payload.Bio != nil {
+			teacher.Bio = *payload.Bio
+		}
+		if payload.Profession != nil {
+			teacher.Profession = *payload.Profession
+		}
+		if payload.Certificate != nil {
+			teacher.Certificate = *payload.Certificate
+		}
+
+		// Update teacher profile in the database
+		if err := h.store.UpdateTeacherProfile(userID, &payload); err != nil {
+			utils.WriteError(writer, http.StatusInternalServerError, fmt.Errorf("failed to update teacher profile: %v", err))
+			return
+		}
+	}
+
+	// Prepare and return the response
+	response := map[string]interface{}{
+		"user":    user,
+		"profile": profile,
+	}
+
+	if user.Role == types.TEACHER {
+		teacher, _ := h.teacher.GetTeacherByUserID(userID)
+		response["teacher"] = teacher
+	}
+
+	utils.WriteJSON(writer, http.StatusOK, response)
 }

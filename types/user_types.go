@@ -31,6 +31,10 @@ type UserStore interface {
 	CreateTeacherWithTransaction(tx *sql.Tx, user *Teacher) error
 	GetTeacherByID(id int) (*Teacher, error)
 	ApproveTeacher(teacherID int) error
+
+	UpdateUserDetails(userID int, payload *UpdateProfilePayload) error
+	UpdateUserProfile(userID int, payload *UpdateProfilePayload) error
+	UpdateTeacherProfile(userID int, payload *UpdateProfilePayload) error
 }
 
 
@@ -146,3 +150,16 @@ type RegisterAdminPayload struct {
 type ApproveTeacherPayload struct {
 	TeacherID int `json:"teacher_id" validate:"required"`
 }
+
+
+type UpdateProfilePayload struct {
+	FirstName      *string `json:"first_name,omitempty" validate:"omitempty"`
+	LastName       *string `json:"last_name,omitempty" validate:"omitempty"`
+	Email          *string `json:"email,omitempty" validate:"omitempty,email"`
+	ProfilePicture *string `json:"profile_picture,omitempty" validate:"omitempty"`
+	Country        *string `json:"country,omitempty" validate:"omitempty"`
+	Bio            *string `json:"bio,omitempty" validate:"omitempty"`
+	Profession     *string `json:"profession,omitempty" validate:"omitempty"`
+	Certificate    *string `json:"certificate,omitempty" validate:"omitempty"`
+}
+

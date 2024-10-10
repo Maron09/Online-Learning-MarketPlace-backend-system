@@ -23,7 +23,7 @@ var ErrDuplicateCourse = errors.New("course with the same name already exists")
 // GetTeacherByUserID retrieves the teacher associated with the given user ID
 func (s *Store) GetTeacherByUserID(userID int) (*types.Teacher, error) {
 	var teacher types.Teacher
-	query := `SELECT id, user_id, user_profile_id, created_at, modified_at 
+	query := `SELECT id, user_id, user_profile_id, bio, profession, certificate, is_approved, created_at, modified_at 
 			FROM teachers 
 			WHERE user_id = $1`
 
@@ -31,6 +31,10 @@ func (s *Store) GetTeacherByUserID(userID int) (*types.Teacher, error) {
 		&teacher.ID,
 		&teacher.UserID,
 		&teacher.UserProfileID,
+		&teacher.Bio,
+		&teacher.Profession,
+		&teacher.Certificate,
+		&teacher.IsApproved,
 		&teacher.CreatedAt,
 		&teacher.ModifiedAt,
 	)
