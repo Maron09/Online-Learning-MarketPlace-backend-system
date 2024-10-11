@@ -7,8 +7,6 @@ import (
 
 
 type UserStore interface {
-	// CreateUser(*User) error
-	// CreateUserProfile(UserProfile) error
 	GetUserByID(int) (User, error)
 	UpdateUser(user User) error
 	GetUserProfile(UserID int) (UserProfile, error)
