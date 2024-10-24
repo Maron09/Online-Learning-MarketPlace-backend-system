@@ -7,10 +7,13 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/sikozonpc/ecom/service/page"
 	"github.com/sikozonpc/ecom/service/search"
 	"github.com/sikozonpc/ecom/service/teacher"
 	"github.com/sikozonpc/ecom/service/user"
 	"github.com/sikozonpc/ecom/types"
+	
+	// "github.com/sikozonpc/ecom/docs"
 )
 
 type APIServer struct {
@@ -33,6 +36,7 @@ func (s *APIServer) Start() error {
 	subrouter := router.PathPrefix("/api/v1").Subrouter()
 
 
+
 	// Registering user routes
 	techStore := teacher.NewStore(s.db)
 	userStore := user.NewStore(s.db) 
@@ -49,6 +53,11 @@ func (s *APIServer) Start() error {
 	searchStore := search.NewStore(s.db)
 	searchHandler := search.NewHandler(searchStore)
 	searchHandler.SearchRoutes(subrouter)
+
+	// Registering the pag routes
+	pageStore := page.NewStore(s.db)
+	pageHandler := page.NewHandler(pageStore)
+	pageHandler.PageRoutes(subrouter)
 
 
 	log.Println("Starting On ", s.addr)

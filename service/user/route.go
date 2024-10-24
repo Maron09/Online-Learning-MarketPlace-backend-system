@@ -58,6 +58,7 @@ func (h *Handler) AuthRoutes(router *mux.Router){
 }
 
 
+
 func (h *Handler) registerHandler(writer http.ResponseWriter, request *http.Request) {
 	var payload types.RegisterUserPayload
 
@@ -378,6 +379,7 @@ func (h *Handler) regenerateOTPHandler(writer http.ResponseWriter, request *http
 }
 
 
+
 func (h *Handler) loginHandler(writer http.ResponseWriter, request *http.Request) {
 	var payload types.LoginUserPayload
 
@@ -400,10 +402,10 @@ func (h *Handler) loginHandler(writer http.ResponseWriter, request *http.Request
         return
     }
 
-	// if !user.Is_active {
-	// 	utils.WriteError(writer, http.StatusForbidden, fmt.Errorf("your account is not active. Please activate your account"))
-	// 	return
-	// }
+	if !user.Is_active {
+		utils.WriteError(writer, http.StatusForbidden, fmt.Errorf("your account is not active. Please activate your account"))
+		return
+	}
 	
 
 	if !auth.CheckPassword(user.Password, []byte(payload.Password)) {

@@ -151,6 +151,7 @@ func (h *Handler) getCategoriesByTeacherHandle(writer http.ResponseWriter, reque
 }
 
 
+
 func (h *Handler) editCategoryHandle(writer http.ResponseWriter, request *http.Request) {
 	userID, err := auth.GetTeacherIDFromToken(request)
 	if err != nil {
@@ -210,6 +211,7 @@ func (h *Handler) editCategoryHandle(writer http.ResponseWriter, request *http.R
 }
 
 
+
 func (h *Handler) deleteCategoryHandle(writer http.ResponseWriter, request *http.Request) {
     // Extract the teacher ID from the JWT token
     userID, err := auth.GetTeacherIDFromToken(request)
@@ -260,6 +262,7 @@ func (h *Handler) deleteCategoryHandle(writer http.ResponseWriter, request *http
 
 
 // COURSE MANAGEMENT
+
 
 func (h *Handler) createCourseHandle(writer http.ResponseWriter, request *http.Request) {
 	var payload types.CreateCoursePayload
@@ -321,7 +324,6 @@ func (h *Handler) createCourseHandle(writer http.ResponseWriter, request *http.R
 	
 	utils.WriteJSON(writer, http.StatusOK, response)
 }
-
 
 
 
@@ -394,6 +396,7 @@ func (h *Handler) editCourseHandle(writer http.ResponseWriter, request *http.Req
 	
 	utils.WriteJSON(writer, http.StatusOK, response)
 }
+
 
 
 
@@ -521,6 +524,7 @@ func (h *Handler) getCoursesHandle(writer http.ResponseWriter, request *http.Req
 
 // SECTION MANAGEMENT
 
+
 func (h *Handler) createSectionHandle(writer http.ResponseWriter, request *http.Request) {
 	var payload types.CreateSectionPayload
 
@@ -554,6 +558,8 @@ func (h *Handler) createSectionHandle(writer http.ResponseWriter, request *http.
 	
 	utils.WriteJSON(writer, http.StatusOK, response)
 }
+
+
 
 
 func (h *Handler) editSectionHandle(writer http.ResponseWriter, request *http.Request) {
@@ -705,6 +711,8 @@ func (h *Handler) deleteSectionHandle(writer http.ResponseWriter, request *http.
 
 
 // VIDEO MANAGEMENT
+
+
 func (h *Handler) createVideoHandle(writer http.ResponseWriter, request *http.Request) {
 	var payload types.CreateVideoPayload
 
@@ -738,6 +746,8 @@ func (h *Handler) createVideoHandle(writer http.ResponseWriter, request *http.Re
 	
 	utils.WriteJSON(writer, http.StatusOK, response)
 }
+
+
 
 
 func (h *Handler) editVideoHandle(writer http.ResponseWriter, request *http.Request) {
@@ -827,7 +837,6 @@ func (h *Handler) editVideoHandle(writer http.ResponseWriter, request *http.Requ
 	
 	utils.WriteJSON(writer, http.StatusOK, response)
 }
-
 
 
 func (h *Handler) deleteVideoHandle(writer http.ResponseWriter, request *http.Request) {

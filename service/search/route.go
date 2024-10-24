@@ -24,6 +24,9 @@ func (h *Handler) SearchRoutes(router *mux.Router) {
 	router.HandleFunc("/search", h.searchCoursesHandler).Methods(http.MethodGet)
 }
 
+
+
+
 func (h *Handler) searchCoursesHandler(writer http.ResponseWriter, request *http.Request) {
 	queryParams := request.URL.Query()
 
