@@ -56,7 +56,7 @@ func (s *APIServer) Start() error {
 
 	// Registering the pag routes
 	pageStore := page.NewStore(s.db)
-	pageHandler := page.NewHandler(pageStore)
+	pageHandler := page.NewHandler(pageStore, userStore, teacherStore)
 	pageHandler.PageRoutes(subrouter)
 
 

@@ -171,6 +171,36 @@ func GetTeacherIDFromToken(r *http.Request) (int, error) {
 }
 
 
+func GetStudentIDFromToken(r *http.Request) (int, error) {
+	tokenString := GetJwtTokenFromRequest(r)
+	if tokenString == "" {
+		return 0, errors.New("invalid token")
+	}
+
+	token, err := ValidateToken(tokenString)
+	if err!= nil {
+        return 0, err
+    }
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return 0, errors.New("invalid token claims")
+	}
+
+	teacherIDClaim, ok := claims["user_id"].(string)
+	if !ok {
+		return 0, errors.New("invalid user_id claim")
+	}
+
+	teacherID, err := strconv.Atoi(teacherIDClaim)
+	if err!= nil {
+        return 0, fmt.Errorf("invalid user_id claim: %v", err)
+    }
+
+	return teacherID, nil
+}
+
+
 
 func GetJwtTokenFromRequest(req *http.Request) string {
 	authHeader := req.Header.Get("Authorization")
@@ -205,7 +235,7 @@ func PermissionDenied(writer http.ResponseWriter, message string) {
 	if message == "" {
 		message = "permission denied"
 	}
-	utils.WriteError(writer, http.StatusForbidden, fmt.Errorf(message))
+	utils.WriteError(writer, http.StatusForbidden, errors.New(message))
 }
 
 

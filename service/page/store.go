@@ -53,7 +53,7 @@ func (s *Store) GetCourseSectionsAndVideos(courseID int) ([]map[string]interface
 
 		if videoURL.Valid {
             sectionMap[sectionID]["videos"] = append(sectionMap[sectionID]["videos"].([]map[string]interface{}), map[string]interface{}{
-                "url": videoURL.String,
+                "file": videoURL.String,
             })
         }
 	}
@@ -71,7 +71,7 @@ func (s *Store) GetCourseDetailBySlug(slug string) (map[string]interface{}, erro
 	courseDetail := make(map[string]interface{})
 
 	query := `
-	SELECT c.id, c.name, c.price, c.modified_at, u.first_name, u.last_name
+	SELECT c.id, c.name, c.price, c.created_at, c.modified_at, u.first_name, u.last_name
 	FROM courses c
 	JOIN teachers t ON c.teacher_id = t.id
 	JOIN users u ON t.user_id = u.id
@@ -81,6 +81,7 @@ func (s *Store) GetCourseDetailBySlug(slug string) (map[string]interface{}, erro
 	var courseID int
 	var name string
 	var price float64
+	var createdAt time.Time
 	var modifiedAt time.Time
 	var firstName string
 	var lastName string
@@ -89,6 +90,7 @@ func (s *Store) GetCourseDetailBySlug(slug string) (map[string]interface{}, erro
 		&courseID,
         &name,
         &price,
+		&createdAt,
         &modifiedAt,
         &firstName,
         &lastName,
@@ -103,7 +105,8 @@ func (s *Store) GetCourseDetailBySlug(slug string) (map[string]interface{}, erro
 
 	courseDetail["name"] = name
 	courseDetail["price"] = price
-	courseDetail["modified_at"] = modifiedAt.Format("2006-01-02")
+	courseDetail["created_at"] = createdAt.Format("01 / 2006")
+	courseDetail["modified_at"] = modifiedAt.Format("01 / 2006")
 	courseDetail["teacher"] = map[string]string{
 		"first_name": firstName,
         "last_name":  lastName,

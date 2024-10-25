@@ -94,8 +94,8 @@ func (s *Store) GetUserByEmail(email string) (types.User, error) {
 
 func (s *Store) GetUserByEmailForLogin(email string) (*types.User, error) {
 	var user types.User
-	query := `SELECT id, email, password, last_login FROM users WHERE email = $1`
-	err := s.db.QueryRow(query, email).Scan(&user.ID, &user.Email, &user.Password, &user.Last_login)
+	query := `SELECT id, email, password, is_active, last_login FROM users WHERE email = $1`
+	err := s.db.QueryRow(query, email).Scan(&user.ID, &user.Email, &user.Password, &user.Is_active, &user.Last_login)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user not found")

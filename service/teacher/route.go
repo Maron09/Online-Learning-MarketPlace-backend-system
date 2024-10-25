@@ -37,8 +37,7 @@ func (h *Handler) TeachRoutes(router *mux.Router){
 	}
 
 	// Categories
-	router.HandleFunc("/course_builder/category", auth.WithJWTAuth(h.getCategoryHandle, h.store, usersOnly)).Methods(http.MethodGet)
-	router.HandleFunc("/course_builder/categories/{teacher_id}", auth.WithJWTAuth(h.getCategoriesByTeacherHandle, h.store, usersOnly)).Methods(http.MethodGet)
+	router.HandleFunc("/course_builder/categories", auth.WithJWTAuth(h.getCategoriesByTeacherHandle, h.store, usersOnly)).Methods(http.MethodGet)
 	router.HandleFunc("/course_builder/category/create", auth.WithJWTAuth(h.createCategoryHandle, h.store, usersOnly)).Methods(http.MethodPost)
 	router.HandleFunc("/course_builder/category/edit/{id}", auth.WithJWTAuth(h.editCategoryHandle, h.store, usersOnly)).Methods(http.MethodPatch)
 	router.HandleFunc("/course_builder/category/delete/{id}", auth.WithJWTAuth(h.deleteCategoryHandle, h.store, usersOnly)).Methods(http.MethodDelete)
@@ -47,7 +46,6 @@ func (h *Handler) TeachRoutes(router *mux.Router){
 	router.HandleFunc("/course_builder/courses/create", auth.WithJWTAuth(h.createCourseHandle, h.store, usersOnly)).Methods((http.MethodPost))
 	router.HandleFunc("/course_builder/course/edit/{id}", auth.WithJWTAuth(h.editCourseHandle, h.store, usersOnly)).Methods(http.MethodPatch)
 	router.HandleFunc("/course_builder/course/delete/{id}", auth.WithJWTAuth(h.deleteCourseHandle, h.store, usersOnly)).Methods(http.MethodDelete)
-	router.HandleFunc("/course_builder/courses", auth.WithJWTAuth(h.getCoursesHandle, h.store, usersOnly)).Methods(http.MethodGet)
 
 	// sections
 	router.HandleFunc("/course_builder/sections/create", auth.WithJWTAuth(h.createSectionHandle, h.store, usersOnly)).Methods(http.MethodPost)
@@ -58,7 +56,15 @@ func (h *Handler) TeachRoutes(router *mux.Router){
 	router.HandleFunc("/course_builder/videos/create", auth.WithJWTAuth(h.createVideoHandle, h.store, usersOnly)).Methods(http.MethodPost)
     router.HandleFunc("/course_builder/video/edit/{id}", auth.WithJWTAuth(h.editVideoHandle, h.store, usersOnly)).Methods(http.MethodPatch)
     router.HandleFunc("/course_builder/video/delete/{id}", auth.WithJWTAuth(h.deleteVideoHandle, h.store, usersOnly)).Methods(http.MethodDelete)
-    // router.HandleFunc("/course_builder/videos", auth.WithJWTAuth(h.getVideosHandle, h.store, usersOnly)).Methods(http.MethodGet)
+
+	// course by category
+	router.HandleFunc("/course_builder/category/{id}", auth.WithJWTAuth(h.courseByCategoryHandle, h.store, usersOnly)).Methods(http.MethodGet)
+
+	// section by course
+	router.HandleFunc("/course_builder/category/{category_id}/course/{course_id}/section/{id}", auth.WithJWTAuth(h.sectionByCourseHandle, h.store, usersOnly)).Methods(http.MethodGet)
+
+    // video by section
+    router.HandleFunc("/course_builder/category/{category_id}/course/{course_id}/section/{section_id}/video/{id}", auth.WithJWTAuth(h.videoBySectionHandle, h.store, usersOnly)).Methods(http.MethodGet)
 }
 
 
@@ -125,23 +131,21 @@ func (h *Handler) createCategoryHandle(writer http.ResponseWriter, request *http
 
 
 
-func (h *Handler) getCategoryHandle(writer http.ResponseWriter, request *http.Request) {
-	cs, err := h.teacher.GetCategory()
-	if err!= nil {
-        utils.WriteError(writer, http.StatusInternalServerError, err)
-        return
-    }
-	utils.WriteJSON(writer, http.StatusOK, cs)
-}
-
-
 func (h *Handler) getCategoriesByTeacherHandle(writer http.ResponseWriter, request *http.Request) {
-	vars := mux.Vars(request)
-	teacherID, err := strconv.Atoi(vars["teacher_id"])
-	if err!= nil {
-        utils.WriteError(writer, http.StatusBadRequest, fmt.Errorf("invalid teacher ID: %s", vars["teacher_id"]))
-        return
-    }
+	userID, err := auth.GetTeacherIDFromToken(request)
+	if err != nil {
+		utils.WriteError(writer, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+		return
+	}
+
+	// Fetch the teacher associated with the userID
+	teacher, err := h.teacher.GetTeacherByUserID(userID)
+	if err != nil {
+		utils.WriteError(writer, http.StatusUnauthorized, fmt.Errorf("teacher not found for this user"))
+		return
+	}
+
+	teacherID := teacher.ID
 	ts, err := h.teacher.GetCategoriesByTeacher(teacherID)
 	if err!= nil {
         utils.WriteError(writer, http.StatusInternalServerError, err)
@@ -262,7 +266,6 @@ func (h *Handler) deleteCategoryHandle(writer http.ResponseWriter, request *http
 
 
 // COURSE MANAGEMENT
-
 
 func (h *Handler) createCourseHandle(writer http.ResponseWriter, request *http.Request) {
 	var payload types.CreateCoursePayload
@@ -442,88 +445,7 @@ func (h *Handler) deleteCourseHandle(writer http.ResponseWriter, request *http.R
 }
 
 
-func (h *Handler) getCoursesHandle(writer http.ResponseWriter, request *http.Request) {
-	// Default values for pagination
-	limit := 10
-	offset := 0
-
-	// Get query parameters for limit and offset
-	queryParams := request.URL.Query()
-
-	if l, ok := queryParams["limit"]; ok {
-		parsedLimit, err := strconv.Atoi(l[0])
-		if err == nil && parsedLimit > 0 {
-			limit = parsedLimit
-		}
-	}
-
-	if o, ok := queryParams["offset"]; ok {
-		parsedOffset, err := strconv.Atoi(o[0])
-		if err == nil && parsedOffset >= 0 {
-			offset = parsedOffset
-		}
-	}
-
-	// Fetch total number of courses
-	totalCourses, err := h.teacher.CountCourses()
-	if err != nil {
-		utils.WriteError(writer, http.StatusInternalServerError, fmt.Errorf("failed to count courses: %v", err))
-		return
-	}
-
-	// Fetch paginated courses
-	courses, err := h.teacher.GetCourses(limit, offset)
-	if err != nil {
-		utils.WriteError(writer, http.StatusInternalServerError, fmt.Errorf("failed to fetch courses: %v", err))
-		return
-	}
-
-	// Generate next and previous page URLs
-	nextPageOffset := offset + limit
-	prevPageOffset := offset - limit
-	if prevPageOffset < 0 {
-		prevPageOffset = 0
-	}
-
-	baseURL := request.URL.Path
-	nextPageURL := fmt.Sprintf("%s?limit=%d&offset=%d", baseURL, limit, nextPageOffset)
-	prevPageURL := fmt.Sprintf("%s?limit=%d&offset=%d", baseURL, limit, prevPageOffset)
-
-	// Response with metadata
-	response := map[string]interface{}{
-		"data":           courses,
-		"total":          totalCourses,
-		"limit":          limit,
-		"offset":         offset,
-		"next_page_url":  nextPageURL,
-		"prev_page_url":  prevPageURL,
-	}
-
-	utils.WriteJSON(writer, http.StatusOK, response)
-}
-
-
-
-// func (h *Handler) getCourseHandle(writer http.ResponseWriter, request *http.Request) {
-// 	vars := mux.Vars(request)
-// 	courseID, err := strconv.Atoi(vars["id"])
-// 	if err != nil {
-// 		utils.WriteError(writer, http.StatusBadRequest, fmt.Errorf("invalid course ID"))
-// 		return
-// 	}
-
-// 	course, err := h.teacher.GetCourseByID(courseID)
-// 	if err != nil {
-// 		utils.WriteError(writer, http.StatusInternalServerError, fmt.Errorf("failed to fetch course"))
-// 		return
-// 	}
-
-// 	utils.WriteJSON(writer, http.StatusOK, course)
-// }
-
-
 // SECTION MANAGEMENT
-
 
 func (h *Handler) createSectionHandle(writer http.ResponseWriter, request *http.Request) {
 	var payload types.CreateSectionPayload
@@ -711,7 +633,6 @@ func (h *Handler) deleteSectionHandle(writer http.ResponseWriter, request *http.
 
 
 // VIDEO MANAGEMENT
-
 
 func (h *Handler) createVideoHandle(writer http.ResponseWriter, request *http.Request) {
 	var payload types.CreateVideoPayload
@@ -905,4 +826,100 @@ func (h *Handler) deleteVideoHandle(writer http.ResponseWriter, request *http.Re
 	response := map[string]string{"message": "Video deleted successfully"}
 	
     utils.WriteJSON(writer, http.StatusOK, response)
+}
+
+
+// COURSE BY CATEGORY
+func (h *Handler) courseByCategoryHandle(writer http.ResponseWriter, request *http.Request) {
+	userID, err := auth.GetTeacherIDFromToken(request)
+	if err != nil {
+		utils.WriteError(writer, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+		return
+	}
+
+	// Fetch the teacher associated with the userID
+	teacher, err := h.teacher.GetTeacherByUserID(userID)
+	if err != nil {
+		utils.WriteError(writer, http.StatusUnauthorized, fmt.Errorf("teacher not found for this user"))
+		return
+	}
+
+	vars := mux.Vars(request)
+	categoryID, err := strconv.Atoi(vars["id"])
+	if err!= nil {
+        utils.WriteError(writer, http.StatusBadRequest, fmt.Errorf("invalid category ID: %s", vars["id"]))
+        return
+    }
+
+	courses, err := h.teacher.GetCoursesByCategory(categoryID, teacher.ID)
+	if err != nil  {
+		utils.WriteError(writer, http.StatusBadRequest, fmt.Errorf("could not fetch courses: %v", err))
+		return
+	}
+	
+    utils.WriteJSON(writer, http.StatusOK, courses)
+}
+
+
+// SECTION BY COURSE
+func (h *Handler) sectionByCourseHandle(writer http.ResponseWriter, request *http.Request) {
+	userID, err := auth.GetTeacherIDFromToken(request)
+	if err != nil {
+		utils.WriteError(writer, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+		return
+	}
+
+	// Fetch the teacher associated with the userID
+	teacher, err := h.teacher.GetTeacherByUserID(userID)
+	if err != nil {
+		utils.WriteError(writer, http.StatusUnauthorized, fmt.Errorf("teacher not found for this user"))
+		return
+	}
+
+	vars := mux.Vars(request)
+	courseID, err := strconv.Atoi(vars["course_id"])
+	if err!= nil {
+        utils.WriteError(writer, http.StatusBadRequest, fmt.Errorf("invalid course ID: %s", vars["id"]))
+        return
+    }
+
+	sections, err := h.teacher.GetSectionsByCourse(courseID, teacher.ID)
+	if err!= nil {
+        utils.WriteError(writer, http.StatusBadRequest, fmt.Errorf("could not fetch sections: %v", err))
+        return
+    }
+
+	utils.WriteJSON(writer, http.StatusOK, sections)
+}
+
+
+// VIDEO BY SECTION
+func (h *Handler) videoBySectionHandle(writer http.ResponseWriter, request *http.Request) {
+	userID, err := auth.GetTeacherIDFromToken(request)
+	if err != nil {
+		utils.WriteError(writer, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+		return
+	}
+
+	// Fetch the teacher associated with the userID
+	teacher, err := h.teacher.GetTeacherByUserID(userID)
+	if err != nil {
+		utils.WriteError(writer, http.StatusUnauthorized, fmt.Errorf("teacher not found for this user"))
+		return
+	}
+
+	vars := mux.Vars(request)
+	sectionID, err := strconv.Atoi(vars["section_id"])
+	if err!= nil {
+        utils.WriteError(writer, http.StatusBadRequest, fmt.Errorf("invalid section ID: %s", vars["id"]))
+        return
+    }
+
+	videos, err := h.teacher.GetVideosBySection(sectionID, teacher.ID)
+	if err!= nil {
+        utils.WriteError(writer, http.StatusBadRequest, fmt.Errorf("could not fetch videos: %v", err))
+        return
+    }
+
+	utils.WriteJSON(writer, http.StatusOK, videos)
 }

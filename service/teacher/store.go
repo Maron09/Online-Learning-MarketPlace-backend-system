@@ -305,7 +305,7 @@ func (s *Store) DeleteCourse(id int) error {
 
 
 func (s *Store) GetCourses(limit, offset int) ([]types.Course, error) {
-	query := `SELECT id, teacher_id, category_id, name, slug, description, price, created_at  FROM courses ORDER BY created_at DESC LIMIT $1 OFFSET $2`
+	query := `SELECT id, teacher_id, category_id, name, slug, description,image, price, created_at  FROM courses ORDER BY created_at DESC LIMIT $1 OFFSET $2`
 
 	rows, err := s.db.Query(query, limit, offset)
 	if err!= nil {
@@ -316,6 +316,7 @@ func (s *Store) GetCourses(limit, offset int) ([]types.Course, error) {
 
 	for rows.Next() {
 		var course types.Course
+		var image sql.NullString
         err := rows.Scan(
             &course.ID,
             &course.TeacherID,
@@ -323,6 +324,7 @@ func (s *Store) GetCourses(limit, offset int) ([]types.Course, error) {
             &course.Name,
             &course.Slug,
             &course.Description,
+			&image,
             &course.Price,
 			&course.CreatedAt,
         )
@@ -466,4 +468,109 @@ func (s *Store) DeleteVideo(id int) error {
         return err
     }
     return nil
+}
+
+
+
+// Course Builder Management
+
+func (s *Store) GetCoursesByCategory(categoryID int, teacherID int) ([]types.Course, error) {
+	query := `
+	SELECT id, teacher_id, category_id, name, slug, description, image, price, created_at
+	FROM courses WHERE category_id = $1 AND teacher_id = $2
+	ORDER BY created_at DESC
+	`
+
+	rows, err := s.db.Query(query, categoryID, teacherID)
+	if err!= nil {
+        return nil, err
+    }
+	defer rows.Close()
+
+	var courses []types.Course
+	for rows.Next() {
+		var course types.Course
+        var image sql.NullString
+        err := rows.Scan(
+            &course.ID,
+            &course.TeacherID,
+			&course.CategoryID,
+            &course.Name,
+            &course.Slug,
+            &course.Description,
+            &image,
+            &course.Price,
+            &course.CreatedAt,
+        )
+        if err!= nil {
+            return nil, err
+        }
+        courses = append(courses, course)
+	}
+	return courses, nil
+}
+
+
+func (s *Store) GetSectionsByCourse(courseID int, teacherID int) ([]types.Section, error) {
+	query := `
+	SELECT s.id, s.course_id, s.title, s.order 
+	FROM sections s
+	JOIN courses c ON s.course_id = c.id
+	WHERE s.course_id = $1 AND c.teacher_id = $2
+	`
+	rows, err := s.db.Query(query, courseID, teacherID)
+	if err!= nil {
+        return nil, err
+    }
+	defer rows.Close()
+
+	var sections []types.Section
+	for rows.Next() {
+		var section types.Section
+        err := rows.Scan(
+            &section.ID,
+            &section.CourseID,
+            &section.Title,
+			&section.Order,
+        )
+        if err!= nil {
+            return nil, err
+        }
+        sections = append(sections, section)
+	}
+	return sections, nil
+}
+
+
+func (s *Store) GetVideosBySection(sectionID int, teacherID int) ([]types.Video, error) {
+	query := `
+	SELECT v.id, v.section_id, v.title, v.video_file, v.order
+		FROM videos v
+		JOIN sections s ON v.section_id = s.id
+		JOIN courses c ON s.course_id = c.id
+		WHERE v.section_id = $1 AND c.teacher_id = $2
+	`
+
+	rows, err := s.db.Query(query, sectionID, teacherID)
+	if err!= nil {
+        return nil, err
+    }
+	defer rows.Close()
+
+	var videos []types.Video
+	for rows.Next() {
+		var video types.Video
+        err := rows.Scan(
+            &video.ID,
+            &video.SectionID,
+            &video.Title,
+            &video.VideoFile,
+			&video.Order,
+        )
+        if err!= nil {
+            return nil, err
+        }
+        videos = append(videos, video)
+	}
+	return videos, nil
 }

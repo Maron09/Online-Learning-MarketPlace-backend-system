@@ -39,6 +39,15 @@ type TeacherStore interface {
 	GetVideoByID(id int) (*Video, error)
 	UpdateVideo(video *Video) error
 	DeleteVideo(id int) error
+
+	// Course by Category
+	GetCoursesByCategory(categoryID int, teacherID int) ([]Course, error)
+
+	// Section by Course
+	GetSectionsByCourse(courseID int, teacherID int) ([]Section, error)
+
+	// VIdeo by Section
+	GetVideosBySection(sectionID int, teacherID int) ([]Video, error)
 }
 
 type Category struct {
