@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/sikozonpc/ecom/service/cart"
 	"github.com/sikozonpc/ecom/service/page"
 	"github.com/sikozonpc/ecom/service/search"
 	"github.com/sikozonpc/ecom/service/teacher"
 	"github.com/sikozonpc/ecom/service/user"
 	"github.com/sikozonpc/ecom/types"
-	
 	// "github.com/sikozonpc/ecom/docs"
 )
 
@@ -54,10 +54,15 @@ func (s *APIServer) Start() error {
 	searchHandler := search.NewHandler(searchStore)
 	searchHandler.SearchRoutes(subrouter)
 
-	// Registering the pag routes
+	// Registering the page routes
 	pageStore := page.NewStore(s.db)
 	pageHandler := page.NewHandler(pageStore, userStore, teacherStore)
 	pageHandler.PageRoutes(subrouter)
+
+	// Registering the cart routes
+	cartStore := cart.NewStore(s.db)
+	cartHandler := cart.NewHandler(cartStore, userStore)
+	cartHandler.CartRoutes(subrouter)
 
 
 	log.Println("Starting On ", s.addr)

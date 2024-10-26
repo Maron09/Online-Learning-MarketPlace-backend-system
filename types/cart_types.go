@@ -4,8 +4,10 @@ import "time"
 
 
 type CartStore interface {
+	GetCart(userID int) ([]Cart, error)
 	AddToCart(cart *Cart) error
-	DeleteFromCart(id int) error
+	DeleteFromCart(cartID, userID int) error
+	CheckIfCourseInCart(userID, courseID int) (bool, error)
 }
 
 
@@ -15,4 +17,9 @@ type Cart struct {
 	CourseID  	int `json:"course_id"`
 	CreatedAt 	time.Time `json:"created_at"`
 	ModifiedAt 	time.Time `json:"modified_at"`
+}
+
+
+type AddToCartPayload struct {
+	CourseID int `json:"course_id"`
 }

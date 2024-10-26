@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/sikozonpc/ecom/service/auth"
 	"github.com/sikozonpc/ecom/types"
 	"github.com/sikozonpc/ecom/utils"
 )
@@ -31,14 +30,9 @@ func NewHandler(page types.PageStore, store types.UserStore, teacher types.Teach
 
 func (h *Handler) PageRoutes(router *mux.Router) {
 
-	usersOnly := []types.UserRole{
-		types.ADMIN,
-		types.STUDENT,
-	}
 
 	router.HandleFunc("/lecture/courses", h.getCoursesHandle).Methods(http.MethodGet)
 	router.HandleFunc("/course/{slug}", h.courseDetailsHandler).Methods(http.MethodGet)
-	router.HandleFunc("/cart", auth.WithJWTAuth(h.cartHandler, h.store, usersOnly)).Methods(http.MethodGet)
 }
 
 func (h *Handler) getCoursesHandle(writer http.ResponseWriter, request *http.Request) {
@@ -121,6 +115,3 @@ func (h *Handler) courseDetailsHandler(writer http.ResponseWriter, request *http
 
 
 
-func (h *Handler) cartHandler(writer http.ResponseWriter, request *http.Request) {
-	
-}
