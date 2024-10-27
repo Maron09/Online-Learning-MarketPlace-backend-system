@@ -1,0 +1,6 @@
+-- CREATE TABLE order_items (
+--     id SERIAL PRIMARY KEY,
+--     order_id INT REFERENCES orders(id) ON DELETE CASCADE,
+--     course_id INT REFERENCES courses(id) ON DELETE CASCADE,
+--     price DECIMAL(10, 2) NOT NULL
+-- );

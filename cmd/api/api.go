@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/sikozonpc/ecom/service/cart"
+	"github.com/sikozonpc/ecom/service/order"
 	"github.com/sikozonpc/ecom/service/page"
 	"github.com/sikozonpc/ecom/service/search"
 	"github.com/sikozonpc/ecom/service/teacher"
@@ -64,6 +65,10 @@ func (s *APIServer) Start() error {
 	cartHandler := cart.NewHandler(cartStore, userStore)
 	cartHandler.CartRoutes(subrouter)
 
+	// Registering the order routes
+	orderStore := order.NewStore(s.db)
+	orderHandler := order.NewHandler(orderStore, userStore, cartStore)
+	orderHandler.OrderRoutes(subrouter)
 
 	log.Println("Starting On ", s.addr)
 	return http.ListenAndServe(s.addr, router)

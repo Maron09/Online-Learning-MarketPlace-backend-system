@@ -8,6 +8,7 @@ type CartStore interface {
 	AddToCart(cart *Cart) error
 	DeleteFromCart(cartID, userID int) error
 	CheckIfCourseInCart(userID, courseID int) (bool, error)
+	GetCartItemsByUserID(userID int) ([]Cart, error)
 }
 
 

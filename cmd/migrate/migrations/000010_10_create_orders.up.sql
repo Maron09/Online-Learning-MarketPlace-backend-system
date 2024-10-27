@@ -1,0 +1,14 @@
+-- CREATE TABLE orders (
+--     id SERIAL PRIMARY KEY,
+--     user_id INT REFERENCES users(id) ON DELETE CASCADE,
+--     first_name VARCHAR(255) NOT NULL,
+--     last_name VARCHAR(255) NOT NULL,
+--     email VARCHAR(255) NOT NULL,
+--     country VARCHAR(100) NOT NULL,
+--     total NUMERIC(10, 2) NOT NULL,
+--     order_number VARCHAR(50) UNIQUE NOT NULL,
+--     status VARCHAR(20) NOT NULL,
+--     created_at TIMESTAMPTZ DEFAULT NOW(),
+--     modified_at TIMESTAMPTZ DEFAULT NOW(),
+--     CONSTRAINT status_check CHECK (status IN ('pending', 'completed', 'cancelled'))
+-- );

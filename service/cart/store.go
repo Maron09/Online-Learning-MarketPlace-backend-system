@@ -2,6 +2,7 @@ package cart
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/sikozonpc/ecom/types"
 )
@@ -74,4 +75,39 @@ func (s *Store) DeleteFromCart(cartID, userID int) error {
     `
     _, err := s.db.Exec(query, cartID, userID)
     return err
+}
+
+
+func (s *Store) GetCartItemsByUserID(userID int) ([]types.Cart, error) {
+	query := `
+	SELECT id, user_id, course_id, created_at, modified_at
+	FROM cart
+	WHERE user_id = $1
+	`
+	rows, err := s.db.Query(query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch cart items: %v", err)
+	}
+	defer rows.Close()
+
+	var cartItems []types.Cart
+	for rows.Next() {
+		var item types.Cart
+        err := rows.Scan(
+            &item.ID,
+            &item.UserID,
+            &item.CourseID,
+            &item.CreatedAt,
+            &item.ModifiedAt,
+        )
+        if err!= nil {
+            return nil, fmt.Errorf("could not scan cart item row: %v", err)
+        }
+        cartItems = append(cartItems, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error during rows iteration: %v", err)
+	}
+	
+	return cartItems, nil
 }

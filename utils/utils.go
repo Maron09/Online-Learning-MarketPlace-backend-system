@@ -12,6 +12,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
@@ -132,3 +133,8 @@ func Slugify(name string, id int) string {
 
 	return slug
 } 
+
+
+func GenerateOrderNumber() string {
+	return fmt.Sprintf("ORD-%d", time.Now().UnixNano())
+}
