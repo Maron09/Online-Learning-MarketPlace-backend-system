@@ -7,6 +7,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/sikozonpc/ecom/cmd/api"
 	"github.com/sikozonpc/ecom/db"
+	"github.com/stripe/stripe-go/v72"
 )
 
 func main() {
@@ -36,6 +37,13 @@ func main() {
 	}
 
 	log.Println("Connected to PostgreSQL Database!")
+
+	api_key := os.Getenv("STRIPE_SECRET_KEY")
+	if api_key == "" {
+		log.Fatal("Missing SECRET_KEY environment variable")
+	}
+
+	stripe.Key = api_key
 
 	server := api.NewAPIServer(
 		":8000",

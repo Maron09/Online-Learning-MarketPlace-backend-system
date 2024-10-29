@@ -14,6 +14,10 @@ type OrderStore interface {
 	CreateOrder(tx *sql.Tx, order *Order) (int, error)
 	CreateOrderItem(tx *sql.Tx, item *OrderItem) error
 	GetCoursePrice(courseID int) (float64, error)
+	GetLatestOrderByUserID(userID int) (*Order, error)
+	UpdateOrderStatus(orderID int, status string) error
+	GetOrderItemsByOrderID(orderID int) ([]OrderItem, error)
+	CreateEnrollment(enrollment *Enrollment) error
 	// GetOrdersByUserID(userID int) ([]Order, error)
 	// GetOrderItemsByOrderID(orderID int) ([]OrderItem, error)
 }
@@ -34,6 +38,7 @@ type Order struct {
 
 
 type OrderItem struct {
+	ID       int     `json:"id"`
 	OrderID  int     `json:"order_id"`
 	CourseID int     `json:"course_id"`
 	Price    float64 `json:"price"`
@@ -45,4 +50,11 @@ type CreateOrderPayload struct {
 	LastName  string       `json:"last_name"`
 	Email     string       `json:"email"`
 	Country   string       `json:"country"`
+}
+
+
+type Enrollment struct {
+	Student    int       `json:"student"`
+	CourseID   int       `json:"course_id"`
+	EnrolledAt time.Time `json:"enrolled_at"`
 }

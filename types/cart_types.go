@@ -9,6 +9,7 @@ type CartStore interface {
 	DeleteFromCart(cartID, userID int) error
 	CheckIfCourseInCart(userID, courseID int) (bool, error)
 	GetCartItemsByUserID(userID int) ([]Cart, error)
+	DeleteCartItems(userID int) error
 }
 
 

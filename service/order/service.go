@@ -74,3 +74,18 @@ func calculateTotalPrice(items []types.Cart, courseMap map[int]float64) float64 
     }
     return total
 }
+
+
+func (h *Handler) EnrollStudentAfterPayment(userID int, courseIDs []int) error {
+	for _, courseID := range courseIDs {
+		enrollment := &types.Enrollment{
+			Student: userID,
+			CourseID: courseID,
+		}
+		err := h.order.CreateEnrollment(enrollment)
+		if err!= nil {
+            return fmt.Errorf("could not enroll student: %v", err)
+        }
+	}
+	return nil
+}

@@ -111,3 +111,12 @@ func (s *Store) GetCartItemsByUserID(userID int) ([]types.Cart, error) {
 	
 	return cartItems, nil
 }
+
+func (o *Store) DeleteCartItems(userID int) error {
+    query := "DELETE FROM cart WHERE user_id = $1"
+    _, err := o.db.Exec(query, userID)
+    if err != nil {
+        return fmt.Errorf("could not delete cart items: %w", err)
+    }
+    return nil
+}
