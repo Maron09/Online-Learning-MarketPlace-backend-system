@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	// "os"
 
@@ -26,8 +27,8 @@ type Handler struct {
 
 
 
-var clientID = "ARjym1jfZwFbPo0BVCTjn_R6LhuzNacmOI_wT79CSfxiZtUU8yoZ3iGVqYt8XVEmj5usOxB2f5DDZtBM"
-var clientSecret = "EG6_1OrsoOlO_H-16fyyEAwWHN4tJ6lmmIIebV8inucSsttETE8Es5fUmJGt0JkStkShea_yV0cU-GR8"
+var clientID = os.Getenv("CLIENT_ID")
+var clientSecret = os.Getenv("CLIENT_SECRET")
 
 func NewHandler(order types.OrderStore, store types.UserStore, cart types.CartStore) *Handler {
     return &Handler{
