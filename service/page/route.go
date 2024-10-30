@@ -99,6 +99,10 @@ func (h *Handler) getCoursesHandle(writer http.ResponseWriter, request *http.Req
 func (h *Handler) courseDetailsHandler(writer http.ResponseWriter, request *http.Request) {
 	vars := mux.Vars(request)
 	slug := vars["slug"]
+	if slug == "" {
+		utils.WriteError(writer, http.StatusBadRequest, fmt.Errorf("missing course slug"))
+		return
+	}
 
 	courseDetail, err := h.page.GetCourseDetailBySlug(slug)
 	if err != nil {

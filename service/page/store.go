@@ -19,7 +19,7 @@ func (s *Store) GetCourseSectionsAndVideos(courseID int) ([]map[string]interface
 	var sections []map[string]interface{}
 
 	query := `
-	SELECT s.id, s.title, COALESCE(v.video_file, '') as video_url
+	SELECT s.id, s.title, v.id, v.title
 	FROM sections s
 	LEFT JOIN videos v ON s.id = v.section_id
 	WHERE s.course_id = $1
@@ -36,9 +36,10 @@ func (s *Store) GetCourseSectionsAndVideos(courseID int) ([]map[string]interface
 	for rows.Next() {
 		var sectionID int
         var title string
-        var videoURL sql.NullString
+        var videoID int
+        var videoTitle string
 
-		err := rows.Scan(&sectionID, &title, &videoURL)
+		err := rows.Scan(&sectionID, &title, &videoID, &videoTitle)
         if err!= nil {
             return nil, fmt.Errorf("failed to scan row: %v", err)
         }
@@ -47,15 +48,13 @@ func (s *Store) GetCourseSectionsAndVideos(courseID int) ([]map[string]interface
 			sectionMap[sectionID] = map[string]interface{}{
 				"id":   sectionID,
                 "title": title,
-                "videos": []map[string]interface{}{},
+                "videos": map[string]any{
+					"id": videoID,
+					"title": videoTitle,
+				},
 			}
 		}
 
-		if videoURL.Valid {
-            sectionMap[sectionID]["videos"] = append(sectionMap[sectionID]["videos"].([]map[string]interface{}), map[string]interface{}{
-                "file": videoURL.String,
-            })
-        }
 	}
 
 	for _, section := range sectionMap {

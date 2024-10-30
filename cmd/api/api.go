@@ -11,6 +11,7 @@ import (
 	"github.com/sikozonpc/ecom/service/order"
 	"github.com/sikozonpc/ecom/service/page"
 	"github.com/sikozonpc/ecom/service/search"
+	"github.com/sikozonpc/ecom/service/student"
 	"github.com/sikozonpc/ecom/service/teacher"
 	"github.com/sikozonpc/ecom/service/user"
 	"github.com/sikozonpc/ecom/types"
@@ -69,6 +70,11 @@ func (s *APIServer) Start() error {
 	orderStore := order.NewStore(s.db)
 	orderHandler := order.NewHandler(orderStore, userStore, cartStore)
 	orderHandler.OrderRoutes(subrouter)
+
+	// Registering the Student routes
+	studentStore := student.NewStore(s.db)
+	studentHandler := student.NewHandler(studentStore, userStore)
+	studentHandler.StudentRoutes(subrouter)
 
 	log.Println("Starting On ", s.addr)
 	return http.ListenAndServe(s.addr, router)
