@@ -27,36 +27,6 @@ func (s *Store) CheckIfCourseInCart(userID, courseID int) (bool, error) {
 }
 
 
-func (s *Store) GetCart(userID int) ([]types.Cart, error) {
-	query := `
-	SELECT id, user_id, course_id, created_at, modified_at
-	FROM cart 
-	WHERE user_id = $1
-	`
-	rows, err := s.db.Query(query, userID)
-	if err!= nil {
-        return nil, err
-    }
-	defer rows.Close()
-	
-	var cartItems[] types.Cart
-	for rows.Next() {
-		var item types.Cart
-		err := rows.Scan(
-			&item.ID,
-            &item.UserID,
-            &item.CourseID,
-            &item.CreatedAt,
-            &item.ModifiedAt,
-		)
-		if err!= nil {
-            return nil, err
-        }
-		cartItems = append(cartItems, item)
-	}
-	return cartItems, nil
-}
-
 
 
 func (s *Store) AddToCart(cart *types.Cart) error {
@@ -80,9 +50,10 @@ func (s *Store) DeleteFromCart(cartID, userID int) error {
 
 func (s *Store) GetCartItemsByUserID(userID int) ([]types.Cart, error) {
 	query := `
-	SELECT id, user_id, course_id, created_at, modified_at
-	FROM cart
-	WHERE user_id = $1
+	SELECT c.id, c.user_id, c.course_id, courses.name, c.created_at, c.modified_at
+	FROM cart AS c
+	JOIN courses ON c.course_id = courses.id
+	WHERE c.user_id = $1
 	`
 	rows, err := s.db.Query(query, userID)
 	if err != nil {
@@ -97,6 +68,7 @@ func (s *Store) GetCartItemsByUserID(userID int) ([]types.Cart, error) {
             &item.ID,
             &item.UserID,
             &item.CourseID,
+			&item.CourseName,
             &item.CreatedAt,
             &item.ModifiedAt,
         )

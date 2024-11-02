@@ -102,6 +102,7 @@ func (s *Store) GetCourseDetailBySlug(slug string) (map[string]interface{}, erro
         }
 	}
 
+	courseDetail["id"] = courseID
 	courseDetail["name"] = name
 	courseDetail["price"] = price
 	courseDetail["created_at"] = createdAt.Format("01 / 2006")

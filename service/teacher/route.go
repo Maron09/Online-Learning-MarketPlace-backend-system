@@ -261,7 +261,7 @@ func (h *Handler) deleteCategoryHandle(writer http.ResponseWriter, request *http
 
     // Send a success response
     response := map[string]string{"message": "Category deleted successfully"}
-    utils.WriteJSON(writer, http.StatusOK, response)
+    utils.WriteJSON(writer, http.StatusNoContent, response)
 }
 
 
@@ -441,7 +441,7 @@ func (h *Handler) deleteCourseHandle(writer http.ResponseWriter, request *http.R
     }
 
 	response := map[string]string{"message": "Course deleted successfully"}
-	utils.WriteJSON(writer, http.StatusOK, response)
+	utils.WriteJSON(writer, http.StatusNoContent, response)
 }
 
 
@@ -628,7 +628,7 @@ func (h *Handler) deleteSectionHandle(writer http.ResponseWriter, request *http.
 
 	response := map[string]string{"message": "section deleted successfully"}
 
-	utils.WriteJSON(writer, http.StatusOK, response)
+	utils.WriteJSON(writer, http.StatusNoContent, response)
 }
 
 
@@ -825,7 +825,7 @@ func (h *Handler) deleteVideoHandle(writer http.ResponseWriter, request *http.Re
 
 	response := map[string]string{"message": "Video deleted successfully"}
 	
-    utils.WriteJSON(writer, http.StatusOK, response)
+    utils.WriteJSON(writer, http.StatusNoContent, response)
 }
 
 

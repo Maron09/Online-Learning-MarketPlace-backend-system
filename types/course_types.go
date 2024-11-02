@@ -48,6 +48,12 @@ type TeacherStore interface {
 
 	// VIdeo by Section
 	GetVideosBySection(sectionID int, teacherID int) ([]Video, error)
+
+
+	CountEnrolledStudents(teacherID int) (int, error)
+	CountCoursesByTeacher(teacherID int) (int, error)
+	GetTeacherProfileByID(teacherID int) (map[string]interface{}, error)
+	CountRatingsAndReviewsForTeacher(teacherID int) (int, int, error)
 }
 
 type Category struct {
@@ -64,6 +70,8 @@ type Category struct {
 type Course struct {
 	ID                int    `json:"id"`
 	TeacherID         int    `json:"teacher_id"`
+	FirstName         string `json:"first_name"`
+	LastName        string `json:"last_name"`
 	CategoryID        int    `json:"category_id"`
 	Name 			  string `json:"name"`
 	Slug              string `json:"slug"`

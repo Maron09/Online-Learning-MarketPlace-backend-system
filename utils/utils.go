@@ -5,8 +5,10 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"net/smtp"
 	"os"
@@ -137,4 +139,16 @@ func Slugify(name string, id int) string {
 
 func GenerateOrderNumber() string {
 	return fmt.Sprintf("ORD-%d", time.Now().UnixNano())
+}
+
+
+func ValidateRating(rating float32) error {
+	if rating < 0.0 || rating > 5.0 {
+		return errors.New("rating must be between 0.0 and 5.0")
+	}
+
+	if math.Floor(float64(rating*10)) != float64(rating*10) {
+		return errors.New("rating must have only one decimal place")
+	}
+	return nil
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/sikozonpc/ecom/service/cart"
 	"github.com/sikozonpc/ecom/service/order"
 	"github.com/sikozonpc/ecom/service/page"
+	"github.com/sikozonpc/ecom/service/rating"
 	"github.com/sikozonpc/ecom/service/search"
 	"github.com/sikozonpc/ecom/service/student"
 	"github.com/sikozonpc/ecom/service/teacher"
@@ -56,11 +57,6 @@ func (s *APIServer) Start() error {
 	searchHandler := search.NewHandler(searchStore)
 	searchHandler.SearchRoutes(subrouter)
 
-	// Registering the page routes
-	pageStore := page.NewStore(s.db)
-	pageHandler := page.NewHandler(pageStore, userStore, teacherStore)
-	pageHandler.PageRoutes(subrouter)
-
 	// Registering the cart routes
 	cartStore := cart.NewStore(s.db)
 	cartHandler := cart.NewHandler(cartStore, userStore)
@@ -75,6 +71,16 @@ func (s *APIServer) Start() error {
 	studentStore := student.NewStore(s.db)
 	studentHandler := student.NewHandler(studentStore, userStore)
 	studentHandler.StudentRoutes(subrouter)
+
+	// Registering the rating routes
+	ratingStore := rating.NewStore(s.db)
+	ratingHandler := rating.NewHandler(ratingStore, userStore)
+	ratingHandler.RatingRoutes(subrouter)
+
+	// Registering the page routes
+	pageStore := page.NewStore(s.db)
+	pageHandler := page.NewHandler(pageStore, userStore, teacherStore, ratingStore)
+	pageHandler.PageRoutes(subrouter)
 
 	log.Println("Starting On ", s.addr)
 	return http.ListenAndServe(s.addr, router)

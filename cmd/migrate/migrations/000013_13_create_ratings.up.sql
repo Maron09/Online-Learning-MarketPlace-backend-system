@@ -1,0 +1,8 @@
+-- CREATE TABLE ratings (
+--     id SERIAL PRIMARY KEY,
+--     student_id INT REFERENCES users(id) ON DELETE CASCADE,
+--     course_id INT REFERENCES courses(id) ON DELETE CASCADE,
+--     rating NUMERIC(2, 1) CHECK (rating >= 0.0 AND rating <= 5.0) NOT NULL,
+--     review TEXT,
+--     created_at TIMESTAMPTZ DEFAULT NOW()
+-- )

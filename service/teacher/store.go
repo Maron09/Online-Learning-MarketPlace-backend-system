@@ -305,7 +305,13 @@ func (s *Store) DeleteCourse(id int) error {
 
 
 func (s *Store) GetCourses(limit, offset int) ([]types.Course, error) {
-	query := `SELECT id, teacher_id, category_id, name, slug, description,image, price, created_at  FROM courses ORDER BY created_at DESC LIMIT $1 OFFSET $2`
+	query := `SELECT c.id, c.teacher_id, u.first_name, u.last_name, c.category_id, c.name, c.slug, c.description, c.image, c.price, c.created_at  
+	FROM courses AS c
+	JOIN teachers AS t ON c.teacher_id = t.id
+	JOIN users AS u ON t.user_id = u.id
+	ORDER BY created_at 
+	DESC LIMIT $1 OFFSET $2
+	`
 
 	rows, err := s.db.Query(query, limit, offset)
 	if err!= nil {
@@ -320,6 +326,8 @@ func (s *Store) GetCourses(limit, offset int) ([]types.Course, error) {
         err := rows.Scan(
             &course.ID,
             &course.TeacherID,
+			&course.FirstName,
+            &course.LastName,
             &course.CategoryID,
             &course.Name,
             &course.Slug,
@@ -573,4 +581,92 @@ func (s *Store) GetVideosBySection(sectionID int, teacherID int) ([]types.Video,
         videos = append(videos, video)
 	}
 	return videos, nil
+}
+
+
+
+func (s *Store) CountEnrolledStudents(teacherID int) (int, error) {
+	query := `
+		SELECT COUNT(DISTINCT student_id)
+		FROM enrollments AS e
+		JOIN courses AS c ON e.course_id = c.id
+		WHERE c.teacher_id = $1`
+	
+	var totalStudents int
+	err := s.db.QueryRow(query, teacherID).Scan(&totalStudents)
+	if err != nil {
+		return 0, fmt.Errorf("could not count enrolled students for teacher: %v", err)
+	}
+
+	return totalStudents, nil
+}
+
+
+func (s *Store) CountCoursesByTeacher(teacherID int) (int, error) {
+	query := `
+		SELECT COUNT(*)
+		FROM courses
+		WHERE teacher_id = $1`
+
+	var totalCourses int
+	err := s.db.QueryRow(query, teacherID).Scan(&totalCourses)
+	if err != nil {
+		return 0, fmt.Errorf("could not count courses for teacher: %v", err)
+	}
+
+	return totalCourses, nil
+}
+
+
+
+func (s *Store) GetTeacherProfileByID(teacherID int) (map[string]interface{}, error) {
+	query := `
+		SELECT t.id, u.first_name, u.last_name, t.bio, t.profession, up.profile_picture,
+		up.country
+		FROM teachers AS t
+		JOIN users AS u ON t.user_id = u.id
+		JOIN user_profiles AS up ON t.user_id = up.user_id
+		WHERE t.id = $1`
+	
+	profile := make(map[string]interface{})
+
+	row := s.db.QueryRow(query, teacherID)
+
+	var id int
+	var firstName, lastName, bio, profession, profilePicture, country string
+	err := row.Scan(
+		&id, &firstName, &lastName, &bio, &profession, &profilePicture, &country,
+	)
+	if err!= nil {
+        return nil, fmt.Errorf("could not get teacher profile by ID: %v", err)
+    }
+	profile["id"] = id
+	profile["first_name"] = firstName
+	profile["last_name"] = lastName
+	profile["bio"] = bio
+	profile["profession"] = profession
+	profile["profile_picture"] = profilePicture
+	profile["country"] = country
+	return profile, nil
+}
+
+
+
+func (s *Store) CountRatingsAndReviewsForTeacher(teacherID int) (int, int, error) {
+	query := `
+		SELECT 
+			COUNT(r.rating) AS total_ratings,
+			COUNT(CASE WHEN r.review IS NOT NULL AND r.review <> '' THEN 1 END) AS total_reviews
+		FROM ratings AS r
+		JOIN courses AS c ON r.course_id = c.id
+		WHERE c.teacher_id = $1`
+
+	var totalRatings, totalReviews int
+
+	err := s.db.QueryRow(query, teacherID).Scan(&totalRatings, &totalReviews)
+	if err!= nil {
+        return 0, 0, fmt.Errorf("could not count ratings and reviews for teacher: %v", err)
+    }
+
+	return totalRatings, totalReviews, nil
 }

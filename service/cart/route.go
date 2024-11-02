@@ -47,7 +47,7 @@ func (h *Handler) cartHandler(writer http.ResponseWriter, request *http.Request)
         return
     }
 
-	cartItems, err := h.cart.GetCart(userID)
+	cartItems, err := h.cart.GetCartItemsByUserID(userID)
 	if err!= nil {
         utils.WriteError(writer, http.StatusInternalServerError, fmt.Errorf("failed to get cart: %v", err))
         return
@@ -127,5 +127,5 @@ func (h *Handler) deleteFromCartHandler(writer http.ResponseWriter, request *htt
         "message": "course deleted from cart successfully",
     }
 
-	utils.WriteJSON(writer, http.StatusOK, response)
+	utils.WriteJSON(writer, http.StatusNoContent, response)
 }
